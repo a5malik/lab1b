@@ -38,7 +38,12 @@ void execute_andor(command_t c,bool time_travel)
 	if(pd == 0)
 	{
 		execute_command(c->u.command[0],time_travel);
-		exit(c->u.command[0]->status);
+		int st = c->u.command[0]->status;
+		if(st == 0)
+		  exit(0);
+		else 
+		  exit(1);
+		//exit(c->u.command[0]->status);
 	}
 	else
 	{
@@ -50,7 +55,12 @@ void execute_andor(command_t c,bool time_travel)
 			if(pd2 == 0)
 			{
 				execute_command(c->u.command[1],time_travel);
-				exit(c->u.command[1]->status);
+				int st = c->u.command[1]->status;
+				if(st == 0)
+				  exit(0);
+				else 
+				  exit(1);
+				//exit(c->u.command[1]->status);
 			}
 			else
 			{
@@ -65,20 +75,31 @@ void execute_andor(command_t c,bool time_travel)
 
 void execute_seq(command_t c, bool time_travel)
 {
-	int status;
+	
 	pid_t pd = fork();
 	if(pd == 0)
 	{
 		execute_command(c->u.command[0],time_travel);
-		exit(c->u.command[0]->status);
+		int st = c->u.command[0]->status;
+		if(st == 0)
+		  exit(0);
+		else 
+		  exit(1);
 	}
 	else 
 	{
+	  int status;
+	  waitpid(pd,&status,0);
 		pid_t pd2 = fork();
 		if(pd2 == 0)
 		{
 			execute_command(c->u.command[1],time_travel);
-			exit(c->u.command[1]->status);
+			int st = c->u.command[1]->status;
+			if(st == 0)
+			  exit(0);
+			else 
+			  exit(1);
+			//exit(c->u.command[1]->status);
 		}
 		else
 		{

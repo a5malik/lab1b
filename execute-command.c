@@ -1,4 +1,4 @@
-12;rgb:0000/0000/000012;rgb:0000/0000/000012;rgb:0000/0000/000012;rgb:0000/0000/000012;rgb:0000/0000/0000// UCLA CS 111 Lab 1 command execution
+// UCLA CS 111 Lab 1 command execution
 
 #include "command.h"
 #include "command-internals.h"
@@ -35,7 +35,7 @@ void execute_andor(command_t c,bool time_travel)
 {
 	int status;
 	pid_t pd = fork();
-	if(pd == 0)
+	if((pd == 0))
 	{
 		execute_command(c->u.command[0],time_travel);
 		int st = c->u.command[0]->status;
@@ -48,8 +48,9 @@ void execute_andor(command_t c,bool time_travel)
 	else
 	{
 		waitpid(pd,&status,0);
-		if((c->type == AND_COMMAND && WEXITSTATUS(status) == 0) 
-			|| (c->type == OR_COMMAND && WEXITSTATUS(status)!= 0))
+		int j = WEXITSTATUS(status);
+		if((c->type == AND_COMMAND && j == 0) 
+			|| (c->type == OR_COMMAND && j != 0))
 		{
 			pid_t pd2 = fork();
 			if(pd2 == 0)
@@ -109,14 +110,14 @@ void execute_seq(command_t c, bool time_travel)
 	}
 }
 
-void execute_subshell(command_t c);
+void execute_subshell(command_t c, bool time_travel)
 {
   pid_t firstPid = fork();
-  if (firstPid < 0)
-    error(1, errno, "fork failed");
+  //if (firstPid < 0)
+  //error(1, errno, "fork failed");
   if (firstPid == 0)
     {
-      execute_command(c->u.subshell_command);
+      execute_command(c->u.subshell_command, time_travel);
       int st = c->u.subshell_command->status;
       if (st == 0)
 	exit(0);
@@ -142,10 +143,10 @@ execute_command (command_t c, bool time_travel)
 			execute_simple(c); break;
 	case OR_COMMAND:
 	case AND_COMMAND:
-			execute_andor(c,time_travel);	break;
+	  execute_andor(c, time_travel);	break;
 	case SEQUENCE_COMMAND:
 			execute_seq(c,time_travel);break;
 	case PIPE_COMMAND: 	break;
-  case SUBSHELL_COMMAND:	execute_subshell(c); break;
+  case SUBSHELL_COMMAND:	execute_subshell(c, time_travel); break;
   }
 }

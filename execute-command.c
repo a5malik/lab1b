@@ -27,7 +27,7 @@ void execute_simple(command_t c)
 	else
 	{
 		waitpid(pd,&status,0);
-		c->status = status;
+		c->status = WEXITSTATUS(status);
 	}
 }
 
@@ -65,11 +65,11 @@ void execute_andor(command_t c,bool time_travel)
 			else
 			{
 				waitpid(pd2,&status,0);
-				c->status = status;
+				c->status = WEXITSTATUS(status);
 			}
 		}
 		else 
-			c->status = status;
+			c->status = WEXITSTATUS(status);
 	}
 }
 
@@ -104,7 +104,7 @@ void execute_seq(command_t c, bool time_travel)
 		else
 		{
 			waitpid(pd2,&status,0);
-			c->status = status;
+			c->status = WEXITSTATUS(status);
 		}
 	}
 }

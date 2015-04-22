@@ -1,4 +1,4 @@
-12;rgb:0000/0000/000012;rgb:0000/0000/000012;rgb:0000/0000/0000// UCLA CS 111 Lab 1 command execution
+12;rgb:0000/0000/000012;rgb:0000/0000/000012;rgb:0000/0000/000012;rgb:0000/0000/000012;rgb:0000/0000/0000// UCLA CS 111 Lab 1 command execution
 
 #include "command.h"
 #include "command-internals.h"

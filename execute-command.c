@@ -1,4 +1,3 @@
-// UCLA CS 111 Lab 1 command execution
 
 #include "command.h"
 #include "command-internals.h"
@@ -7,7 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <error.h>
-
+#include <string.h>
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
@@ -22,7 +21,14 @@ void execute_simple(command_t c)
 	pid_t pd = fork();
 	if(pd == 0)
 	{
-		execvp(c->u.word[0],c->u.word);
+	  if( c->u.word[0][0] == 'e' &&
+	      c->u.word[0][1] == 'x' &&
+	      c->u.word[0][2] == 'e' && 
+	      c->u.word[0][3] == 'c' &&
+	      c->u.word[0][4] == '\0')
+	    execvp(c->u.word[1],&(c->u.word[1]));
+	  else 
+	      execvp(c->u.word[0],c->u.word);
 	}
 	else
 	{

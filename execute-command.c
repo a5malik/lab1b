@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <error.h>
-#include <string.h>
 #include <fcntl.h>
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
@@ -18,7 +17,7 @@ command_status (command_t c)
 void execute_simple(command_t c)
 {
 	int status;
-	int fd2;
+	int fd2,fd3;
 	pid_t pd = fork();
 	if(pd == 0)
 	{
@@ -27,12 +26,14 @@ void execute_simple(command_t c)
 	      //	      fd = dup(0);
 	      fd2 = open(c->input, O_RDONLY, 0644);
 	      //printf("Input is %s, fd2 is %d", c->input, fd2);
-	      dup2(fd2, 0);
+	      if(dup2(fd2, 0)<0)
+			  exit(1);
 	    }
 	  if (c->output != NULL)
 	    {
-	      fd2 = open(c->output, O_CREAT | O_TRUNC | O_WRONLY, 0644);
-	      dup2(fd2, 1);
+	      fd3 = open(c->output, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+	      if(dup2(fd3, 1)<0)
+			  exit(1);
 	    }
 	  if( c->u.word[0][0] == 'e' &&
 	      c->u.word[0][1] == 'x' &&

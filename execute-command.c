@@ -1,4 +1,3 @@
-
 #include "command.h"
 #include "command-internals.h"
 #include <unistd.h>
@@ -7,6 +6,7 @@
 #include <stdio.h>
 #include <error.h>
 #include <string.h>
+#include <fcntl.h>
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
@@ -18,9 +18,22 @@ command_status (command_t c)
 void execute_simple(command_t c)
 {
 	int status;
+	int fd2;
 	pid_t pd = fork();
 	if(pd == 0)
 	{
+	  if (c->input != NULL)
+	    {
+	      //	      fd = dup(0);
+	      fd2 = open(c->input, O_RDONLY, 0644);
+	      //printf("Input is %s, fd2 is %d", c->input, fd2);
+	      dup2(fd2, 0);
+	    }
+	  if (c->output != NULL)
+	    {
+	      fd2 = open(c->output, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+	      dup2(fd2, 1);
+	    }
 	  if( c->u.word[0][0] == 'e' &&
 	      c->u.word[0][1] == 'x' &&
 	      c->u.word[0][2] == 'e' && 
@@ -34,6 +47,7 @@ void execute_simple(command_t c)
 	{
 		waitpid(pd,&status,0);
 		c->status = WEXITSTATUS(status);
+		
 	}
 }
 
@@ -118,24 +132,30 @@ void execute_seq(command_t c, bool time_travel)
 
 void execute_subshell(command_t c, bool time_travel)
 {
-  pid_t firstPid = fork();
+  // pid_t firstPid = fork();
   //if (firstPid < 0)
   //error(1, errno, "fork failed");
-  if (firstPid == 0)
+  //if (firstPid == 0)
+  //  {
+  if (c->output != NULL)
     {
+      int fd = open(c->output, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+      dup2(fd, 1);
+    }
       execute_command(c->u.subshell_command, time_travel);
-      int st = c->u.subshell_command->status;
-      if (st == 0)
-	exit(0);
-      else
-	exit(1);
-    }
-  else
-    {
-      int status;
-      waitpid(firstPid, &status, 0);
-      c->status = WEXITSTATUS(status);
-    }
+    
+      //  int st = c->u.subshell_command->status;
+      //if (st == 0)
+      //	exit(0);
+      //else
+      //	exit(1);
+      // }
+      // else
+      // {
+      //int status;
+      //waitpid(firstPid, &status, 0);
+      c->status = c->u.subshell_command->status;
+      //}
 }
 
 void execute_pipe(command_t c, bool time_travel)

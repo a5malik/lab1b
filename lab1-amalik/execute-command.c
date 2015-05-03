@@ -21,7 +21,7 @@ typedef struct {
 
 typedef struct {
   command_t command;
-  struct GraphNode** before;
+  Queue before;
   pid_t pid;
   int num;
   RLWL* words;
@@ -142,36 +142,38 @@ DependencyGraph createGraph(command_stream_t str)
   GraphNode* list = (GraphNode *)malloc(maxsize*sizeof(GraphNode));
   while ((command = read_command_stream(str)))
     {
-      if (num == maxsize)
+     if (num == maxsize)
 	{
 	  maxsize *= 2;
 	  list = (GraphNode *)realloc(list, maxsize*sizeof(GraphNode));
 	}
+	
     }
 }
 
 int executeNoDependencies(Queue* no_dependencies)
 {
-  for each GraphNode i in no_dependcies
+  for(int curnode = 0;curnode < no_dependencies->cursize;curnode++)
     {
       pid_t pid = fork()
-	if (pid == 0)
-	  {
-	    execute_command(i->command, true);
-	    exit(0);
-	  }
-	else
-	  {
-	    i->pid = pid;
-	  }
+	if(pid == 0)
+	{
+		execute_command(no_dependencies->qu[cursize]->command,false);
+		exit(0);
+	}
+	else 
+	{
+		no_dependencies->qu[cursize]->pid = pid;
+	}
     }
 }
 
-int executeDependencies(Queue* no_dependencies)
+int executeDependencies(Queue* dependencies)
 {
-  for each GraphNode i in dependencies list
+	int status;
+  for(int curnode = 0;curnode < dependencies->cursize;curnode++)
     {
-      int status;
+     /* int status;
       for each GraphNode j  in i->before
 	{
 	  waitpid(i - pid, &status, 0);
@@ -185,12 +187,25 @@ int executeDependencies(Queue* no_dependencies)
       else
 	{
 	  i->pid = pid;
+	}*/
+	for(int i = 0; i < dependencies->qu[curnode]->before->cursize;i++)
+		waitpid(dependencies->qu[curnode]->pid,&status, 0);
+	pid_t pid = fork();
+	if(pid == 0)
+	{
+		execute_command(dependencies->qu[cursize]->command,false);
+		exit(0);
+	}
+	else 
+	{
+		dependencies->qu[cursize]->pid = pid;
 	}
     }
 }
 int executeGraph(DependencyGraph* graph)
 {
-
+	executeNoDependencies(graph->no_dependencies);
+	executeDependencies(graph->dependencies);
 }
 int
 command_status(command_t c)

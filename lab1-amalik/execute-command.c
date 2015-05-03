@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <error.h>
 #include <fcntl.h>
+#include <string.h>
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
@@ -18,10 +19,30 @@ typedef struct {
   int maxWChars;
 } RLWL;
 
+int intersect(char **a, int nA, char **b, int nB)
+{
+  for (int i = 0; i < nA; i++)
+    {
+      for (int j = 0; j < nB; j++)
+	{
+	  if (strlen(a[i]) != strlen(b[j]))
+	    continue;
+	  for (int r = 0; r < strlen(a[i]); r++)
+	    {
+	      if (a[i][r] != b[j][r])
+		continue;
+	    }
+	  return 1;
+	}
+    }
+  return 0;
+}
 
 typedef struct {
   command_t command;
-  Queue before;
+  int curbefore;
+  int maxbefore;
+  struct GraphNode** before;
   pid_t pid;
   int num;
   RLWL* words;
@@ -33,12 +54,21 @@ typedef struct
   int maxsize;
   GraphNode** qu;
 } Queue;
-
 typedef struct {
   Queue* no_dependencies;
   Queue* dependencies;
 } DependencyGraph;
 
+void addGraphNode(GraphNode *a, GraphNode *b) // adds b to the before of a
+{
+  if (a->curbefore == a->maxbefore)
+    {
+      a->maxbefore *= 2;
+      a->before = (GraphNode **)realloc(a->before, a->maxbefore * sizeof(GraphNode *));
+    }
+  a->before[a->curbefore] = b;
+  a->curbefore++;
+}
 void addRead(RLWL* cur, char* g)
 {
   if (cur->curRChars == cur->maxRChars)
@@ -61,7 +91,7 @@ void addWrite(RLWL* cur, char* g)
   cur->curRChars++;
 }
 
-RLWL getLists(command_t c, RLWL* cur)
+RLWL* getLists(command_t c, RLWL* cur)
 {
   if (c->type == SIMPLE_COMMAND)
     {
@@ -96,7 +126,7 @@ RLWL getLists(command_t c, RLWL* cur)
     }
   return cur;
 }
-RLWL getLists(command_t c)
+RLWL* getLists(command_t c)
 {
   RLWL* g;
   g->curRChars = 0;
@@ -118,19 +148,19 @@ void initQueue(Queue* q)
 
 void pushq(Queue* q, GraphNode* gn)
 {
-  if(cursize == maxsize)
-  {
-	  maxsize*=2;
-	  q->qu = (GraphNode**)realloc(q->qu,q->maxsize*sizeof(GraphNode*));
-  }
+  if (cursize == maxsize)
+    {
+      maxsize *= 2;
+      q->qu = (GraphNode**)realloc(q->qu, q->maxsize*sizeof(GraphNode*));
+    }
   q->qu[cursize] = gn;
   q->cursize++;
 }
 
 void popq(Queue* q, GraphNode* gn)
 {
-  if(q->cursize == 0)
-	  return;
+  if (q->cursize == 0)
+    return;
   else q->cursize--;
 }
 
@@ -142,38 +172,56 @@ DependencyGraph createGraph(command_stream_t str)
   GraphNode* list = (GraphNode *)malloc(maxsize*sizeof(GraphNode));
   while ((command = read_command_stream(str)))
     {
-     if (num == maxsize)
+      if (num == maxsize)
 	{
 	  maxsize *= 2;
 	  list = (GraphNode *)realloc(list, maxsize*sizeof(GraphNode));
 	}
-	
+      list[num].num = num;
+      list[num].words = getLists(command);
+      list[num].pid = -1;
+      list[num].command = command;
+      list[num].curbefore = 0;
+      list[num].maxbefore = 10;
+      list[num].before = (GraphNode **)malloc(list[num].maxbefore*sizeof(GraphNode *));
+      num++;
+    }
+  for (int i = 0; i < num; i++)
+    {
+      for (int j = i + 1; j < num; j++)
+	{
+	  if (intersect(list[i].words->ReadList, list[i].words->curRChars, list[j].words->WriteList, list[j].words->curWChars) ||
+	      intersect(list[i].words->WriteList, list[i].words->curWChars, list[j].words->ReadList, list[j].words->curRChars) ||
+	      intersect(list[i].words->WriteList, list[i].words->curWChars, list[j].words->WriteList, list[j].words->curWChars ))
+	    {
+	      addGraphNode(&list[j], &list[i]);
+	    }
+	}
     }
 }
 
 int executeNoDependencies(Queue* no_dependencies)
 {
-  for(int curnode = 0;curnode < no_dependencies->cursize;curnode++)
+  for (int curnode = 0; curnode < no_dependencies->cursize; curnode++)
     {
       pid_t pid = fork()
-	if(pid == 0)
-	{
-		execute_command(no_dependencies->qu[cursize]->command,false);
-		exit(0);
-	}
-	else 
-	{
-		no_dependencies->qu[cursize]->pid = pid;
-	}
+	if (pid == 0)
+	  {
+	    execute_command(i->command, true);
+	    exit(0);
+	  }
+	else
+	  {
+	    i->pid = pid;
+	  }
     }
 }
 
-int executeDependencies(Queue* dependencies)
+int executeDependencies(Queue* no_dependencies)
 {
-	int status;
-  for(int curnode = 0;curnode < dependencies->cursize;curnode++)
+  for (int curnode = 0; curnode < dependencies->cursize; curnode++)
     {
-     /* int status;
+      int status;
       for each GraphNode j  in i->before
 	{
 	  waitpid(i - pid, &status, 0);
@@ -187,25 +235,13 @@ int executeDependencies(Queue* dependencies)
       else
 	{
 	  i->pid = pid;
-	}*/
-	for(int i = 0; i < dependencies->qu[curnode]->before->cursize;i++)
-		waitpid(dependencies->qu[curnode]->pid,&status, 0);
-	pid_t pid = fork();
-	if(pid == 0)
-	{
-		execute_command(dependencies->qu[cursize]->command,false);
-		exit(0);
-	}
-	else 
-	{
-		dependencies->qu[cursize]->pid = pid;
 	}
     }
 }
 int executeGraph(DependencyGraph* graph)
 {
-	executeNoDependencies(graph->no_dependencies);
-	executeDependencies(graph->dependencies);
+  executeNoDependencies(graph->no_dependencies);
+  executeDependencies(graph->dependencies);
 }
 int
 command_status(command_t c)

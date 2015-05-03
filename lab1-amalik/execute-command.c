@@ -29,8 +29,11 @@ typedef struct {
 
 typedef struct
 {
-  //FIXME
+  int cursize;
+  int maxsize;
+  GraphNode** qu;
 } Queue;
+
 typedef struct {
   Queue* no_dependencies;
   Queue* dependencies;
@@ -108,16 +111,27 @@ RLWL getLists(command_t c)
 void initQueue(Queue* q)
 {
   //FIXME
+  q->cursize = 0;
+  q->maxsize = 10;
+  q->qu = (GraphNode**)malloc(q->maxsize*sizeof(GraphNode*));
 }
 
 void pushq(Queue* q, GraphNode* gn)
 {
-  //FIXME
+  if(cursize == maxsize)
+  {
+	  maxsize*=2;
+	  q->qu = (GraphNode**)realloc(q->qu,q->maxsize*sizeof(GraphNode*));
+  }
+  q->qu[cursize] = gn;
+  q->cursize++;
 }
 
 void popq(Queue* q, GraphNode* gn)
 {
-  //FIXME
+  if(q->cursize == 0)
+	  return;
+  else q->cursize--;
 }
 
 DependencyGraph createGraph(command_stream_t str)

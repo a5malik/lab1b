@@ -23,6 +23,8 @@ typedef struct {
   command_t command;
   struct GraphNode** before;
   pid_t pid;
+  int num;
+  RLWL* words;
 } GraphNode;
 
 typedef struct
@@ -39,8 +41,21 @@ void addRead(RLWL* cur, char* g)
   if (cur->curRChars == cur->maxRChars)
     {
       cur->maxRChars *= 2;
-      cur->ReadList
-	}
+      cur->ReadList = (char **)realloc(cur->ReadList, cur->maxRChars * sizeof(char *));
+    }
+  cur->ReadList[cur->curRChars] = g;
+  cur->curRChars++;
+}
+
+void addWrite(RLWL* cur, char* g)
+{
+  if (cur->curWChars == cur->maxWChars)
+    {
+      cur->maxWChars *= 2;
+      cur->WriteList = (char **)realloc(cur->WriteList, cur->maxWChars * sizeof(char *));
+    }
+  cur->WriteList[cur->curWChars] = g;
+  cur->curRChars++;
 }
 
 RLWL getLists(command_t c, RLWL* cur)
@@ -53,9 +68,30 @@ RLWL getLists(command_t c, RLWL* cur)
 	  i++;
 	  if (c->u.word[i][0] == '-')
 	    continue;
-	  addRead(RLWL, c->u.word[i])
+	  addRead(cur, c->u.word[i])
+	    }
+      if (c->input != NULL)
+	{
+	  addRead(cur, c->input);
+	}
+      if (c->output != NULL)
+	{
+	  addWrite(cur, c->output);
+	}
+    }
+  else if (c->type == SUBSHELL_COMMAND)
+    {
+      if (c->output != NULL)
+	{
+	  addWrite(cur, c->output)
 	    }
     }
+  else if (c->type == AND_COMMAND || c->type == OR_COMMAND || c->type == SEQUENCE_COMMAND || c->type == PIPE_COMMAND)
+    {
+      getLists(c->u.command[0], cur);
+      getLists(c->u.command[1], cur);
+    }
+  return cur;
 }
 RLWL getLists(command_t c)
 {
@@ -86,7 +122,18 @@ void popq(Queue* q, GraphNode* gn)
 
 DependencyGraph createGraph(command_stream_t str)
 {
-  //FIXME
+  int num = 0;
+  command_t command;
+  int maxsize = 10;
+  GraphNode* list = (GraphNode *)malloc(maxsize*sizeof(GraphNode));
+  while ((command = read_command_stream(str)))
+    {
+      if (num == maxsize)
+	{
+	  maxsize *= 2;
+	  list = (GraphNode *)realloc(list, maxsize*sizeof(GraphNode));
+	}
+    }
 }
 
 int executeNoDependencies(Queue* no_dependencies)

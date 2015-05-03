@@ -189,7 +189,7 @@ int executeDependencies(Queue* dependencies)
 	  i->pid = pid;
 	}*/
 	for(int i = 0; i < dependencies->qu[curnode]->before->cursize;i++)
-		waitpid(dependencies->qu[curnode]->pid,&status, 0);
+		waitpid(dependencies->qu[curnode]->before[i]->pid,&status, 0);
 	pid_t pid = fork();
 	if(pid == 0)
 	{

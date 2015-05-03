@@ -1,4 +1,4 @@
-#include "command.h"
+12;rgb:0000/0000/0000#include "command.h"
 #include "command-internals.h"
 #include <unistd.h>
 #include <sys/wait.h>
@@ -200,41 +200,55 @@ DependencyGraph createGraph(command_stream_t str)
     }
 }
 
+
 int executeNoDependencies(Queue* no_dependencies)
 {
-  for (int curnode = 0; curnode < no_dependencies->cursize; curnode++)
+  for(int curnode = 0;curnode < no_dependencies->cursize;curnode++)
     {
       pid_t pid = fork()
-	if (pid == 0)
+	if(pid == 0)
 	  {
-	    execute_command(i->command, true);
+	    execute_command(no_dependencies->qu[cursize]->command,false);
 	    exit(0);
 	  }
 	else
 	  {
-	    i->pid = pid;
+	    no_dependencies->qu[cursize]->pid = pid;
 	  }
     }
 }
 
-int executeDependencies(Queue* no_dependencies)
+int executeDependencies(Queue* dependencies)
 {
-  for (int curnode = 0; curnode < dependencies->cursize; curnode++)
+  int status;
+  for(int curnode = 0;curnode < dependencies->cursize;curnode++)
     {
-      int status;
+      /* int status;
       for each GraphNode j  in i->before
-	{
-	  waitpid(i - pid, &status, 0);
+      {
+        waitpid(i - pid, &status, 0);
 	}
       pid_t pid = fork();
       if (pid == 0)
+      {
+        execute->command(i->command);
+	  exit(0);
+	  }
+      else
+      {
+        i->pid = pid;
+	}*/
+      for(int i = 0; i < dependencies->qu[curnode]->before->cursize;i++)
+	waitpid(dependencies->qu[curnode]->pid,&status, 0);
+      pid_t pid = fork();
+      if(pid == 0)
 	{
-	  execute->command(i->command);
+	  execute_command(dependencies->qu[cursize]->command,false);
 	  exit(0);
 	}
       else
 	{
-	  i->pid = pid;
+	  dependencies->qu[cursize]->pid = pid;
 	}
     }
 }

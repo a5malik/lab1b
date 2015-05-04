@@ -1,4 +1,4 @@
-12;rgb:0000/0000/0000#include "command.h"
+#include "command.h"
 #include "command-internals.h"
 #include <unistd.h>
 #include <sys/wait.h>
@@ -38,26 +38,7 @@ int intersect(char **a, int nA, char **b, int nB)
   return 0;
 }
 
-typedef struct {
-  command_t command;
-  int curbefore;
-  int maxbefore;
-  struct GraphNode** before;
-  pid_t pid;
-  int num;
-  RLWL* words;
-} GraphNode;
 
-typedef struct
-{
-  int cursize;
-  int maxsize;
-  GraphNode** qu;
-} Queue;
-typedef struct {
-  Queue* no_dependencies;
-  Queue* dependencies;
-} DependencyGraph;
 
 void addGraphNode(GraphNode *a, GraphNode *b) // adds b to the before of a
 {
@@ -164,12 +145,14 @@ void popq(Queue* q, GraphNode* gn)
   else q->cursize--;
 }
 
-DependencyGraph createGraph(command_stream_t str)
+void createGraph(command_stream_t str,DependencyGraph* graph)
 {
   int num = 0;
   command_t command;
   int maxsize = 10;
   GraphNode* list = (GraphNode *)malloc(maxsize*sizeof(GraphNode));
+  initq(graph->no_dependencies);
+  initq(graph->dependencies);
   while ((command = read_command_stream(str)))
     {
       if (num == maxsize)
@@ -195,9 +178,15 @@ DependencyGraph createGraph(command_stream_t str)
 	      intersect(list[i].words->WriteList, list[i].words->curWChars, list[j].words->WriteList, list[j].words->curWChars ))
 	    {
 	      addGraphNode(&list[j], &list[i]);
+		  pushq(graph->dependencies,&list[j]);
 	    }
 	}
     }
+	for(int  i = 0; i < num;i++)
+	{
+		if(list[i].curbefore == 0)
+			pushq(graph->no_dependencies,&list[i]);
+	}
 }
 
 
@@ -238,8 +227,8 @@ int executeDependencies(Queue* dependencies)
       {
         i->pid = pid;
 	}*/
-      for(int i = 0; i < dependencies->qu[curnode]->before->cursize;i++)
-		waitpid(dependencies->qu[curnode]->before->qu[i]->pid,&status, 0);
+      for(int i = 0; i < dependencies->qu[curnode]->before[curbefore];i++)
+		waitpid(dependencies->qu[curnode]->before[i]->pid,&status, 0);
       pid_t pid = fork();
       if(pid == 0)
 	{

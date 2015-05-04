@@ -53,6 +53,16 @@ main (int argc, char **argv)
 
   command_t last_command = NULL;
   command_t command;
+  if(time_travel)
+  {
+	  DependencyGraph graph;
+	  createGraph(command_stream,&graph);
+	  int fstatus = 0;
+	  executeGraph(graph);
+	  return fstatus;
+  }
+  else
+  {
   while ((command = read_command_stream (command_stream)))
     {
       if (print_tree)
@@ -68,4 +78,5 @@ main (int argc, char **argv)
     }
 
   return print_tree || !last_command ? 0 : command_status (last_command);
+  }
 }

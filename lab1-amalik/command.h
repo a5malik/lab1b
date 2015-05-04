@@ -24,3 +24,28 @@ void execute_command (command_t, bool);
 /* Return the exit status of a command, which must have previously
    been executed.  Wait for the command, if it is not already finished.  */
 int command_status (command_t);
+
+typedef struct {
+  command_t command;
+  int curbefore;
+  int maxbefore;
+  GraphNode** before;
+  pid_t pid;
+  int num;
+  RLWL* words;
+} GraphNode;
+
+typedef struct
+{
+  int cursize;
+  int maxsize;
+  GraphNode** qu;
+} Queue;
+
+typedef struct {
+  Queue* no_dependencies;
+  Queue* dependencies;
+} DependencyGraph;
+
+int executeGraph(DependencyGraph* graph);
+void createGraph(command_stream_t str,DependencyGraph* graph);

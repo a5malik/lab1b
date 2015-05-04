@@ -1,7 +1,8 @@
 // UCLA CS 111 Lab 1 command interface
 
 #include <stdbool.h>
-
+#include <sys/wait.h>
+#include <unistd.h>
 typedef struct command *command_t;
 typedef struct command_stream *command_stream_t;
 
@@ -25,14 +26,23 @@ void execute_command (command_t, bool);
    been executed.  Wait for the command, if it is not already finished.  */
 int command_status (command_t);
 
+struct {
+  char** ReadList;
+  int curRChars;
+  int maxRChars;
+  char** WriteList;
+  int curWChars;
+  int maxWChars;
+} RLWL;
+
 typedef struct {
   command_t command;
   int curbefore;
   int maxbefore;
-  GraphNode** before;
-  pid_t pid;
+   pid_t pid;
   int num;
   RLWL* words;
+  GraphNode** before;
 } GraphNode;
 
 typedef struct

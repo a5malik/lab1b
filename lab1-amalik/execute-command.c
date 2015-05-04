@@ -10,14 +10,8 @@
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
-typedef struct {
-  char** ReadList;
-  int curRChars;
-  int maxRChars;
-  char** WriteList;
-  int curWChars;
-  int maxWChars;
-} RLWL;
+
+
 
 int intersect(char **a, int nA, char **b, int nB)
 {

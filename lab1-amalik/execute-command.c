@@ -21,13 +21,14 @@ typedef struct {
 
 int intersect(char **a, int nA, char **b, int nB)
 {
-  for (int i = 0; i < nA; i++)
+	int i, j,r;
+  for (i = 0; i < nA; i++)
     {
-      for (int j = 0; j < nB; j++)
+      for (j = 0; j < nB; j++)
 	{
 	  if (strlen(a[i]) != strlen(b[j]))
 	    continue;
-	  for (int r = 0; r < strlen(a[i]); r++)
+	  for ( r = 0; r < (int)strlen(a[i]); r++)
 	    {
 	      if (a[i][r] != b[j][r])
 		continue;
@@ -72,17 +73,17 @@ void addWrite(RLWL* cur, char* g)
   cur->curRChars++;
 }
 
-RLWL* getLists(command_t c, RLWL* cur)
+RLWL* getLists2(command_t c, RLWL* cur)
 {
   if (c->type == SIMPLE_COMMAND)
     {
       int i = 1;
-      while (c->u.word[i] != "\0")
+      while (c->u.word[i] != '\0')
 	{
 	  i++;
 	  if (c->u.word[i][0] == '-')
 	    continue;
-	  addRead(cur, c->u.word[i])
+	  addRead(cur, c->u.word[i]);
 	    }
       if (c->input != NULL)
 	{
@@ -97,17 +98,17 @@ RLWL* getLists(command_t c, RLWL* cur)
     {
       if (c->output != NULL)
 	{
-	  addWrite(cur, c->output)
+	  addWrite(cur, c->output);
 	    }
     }
   else if (c->type == AND_COMMAND || c->type == OR_COMMAND || c->type == SEQUENCE_COMMAND || c->type == PIPE_COMMAND)
     {
-      getLists(c->u.command[0], cur);
-      getLists(c->u.command[1], cur);
+      getLists2(c->u.command[0], cur);
+      getLists2(c->u.command[1], cur);
     }
   return cur;
 }
-RLWL* getLists(command_t c)
+RLWL* getLists1(command_t c)
 {
   RLWL* g;
   g->curRChars = 0;
@@ -116,7 +117,7 @@ RLWL* getLists(command_t c)
   g->maxRChars = 10;
   g->ReadList = (char **)malloc(g->maxRChars * sizeof(char *));
   g->WriteList = (char **)malloc(g->maxWChars * sizeof(char *));
-  return getLists(c, g);
+  return getLists2(c, g);
 }
 
 void initQueue(Queue* q)
@@ -129,16 +130,16 @@ void initQueue(Queue* q)
 
 void pushq(Queue* q, GraphNode* gn)
 {
-  if (cursize == maxsize)
+  if (q->cursize == q->maxsize)
     {
-      maxsize *= 2;
+      q->maxsize *= 2;
       q->qu = (GraphNode**)realloc(q->qu, q->maxsize*sizeof(GraphNode*));
     }
-  q->qu[cursize] = gn;
+  q->qu[q->cursize] = gn;
   q->cursize++;
 }
 
-void popq(Queue* q, GraphNode* gn)
+void popq(Queue* q)
 {
   if (q->cursize == 0)
     return;
@@ -151,8 +152,8 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
   command_t command;
   int maxsize = 10;
   GraphNode* list = (GraphNode *)malloc(maxsize*sizeof(GraphNode));
-  initq(graph->no_dependencies);
-  initq(graph->dependencies);
+  initQueue(graph->no_dependencies);
+  initQueue(graph->dependencies);
   while ((command = read_command_stream(str)))
     {
       if (num == maxsize)
@@ -161,7 +162,7 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
 	  list = (GraphNode *)realloc(list, maxsize*sizeof(GraphNode));
 	}
       list[num].num = num;
-      list[num].words = getLists(command);
+      list[num].words = getLists1(command);
       list[num].pid = -1;
       list[num].command = command;
       list[num].curbefore = 0;
@@ -169,9 +170,10 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
       list[num].before = (GraphNode **)malloc(list[num].maxbefore*sizeof(GraphNode *));
       num++;
     }
-  for (int i = 0; i < num; i++)
+	int i, j;
+  for (i = 0; i < num; i++)
     {
-      for (int j = i + 1; j < num; j++)
+      for (j = i + 1; j < num; j++)
 	{
 	  if (intersect(list[i].words->ReadList, list[i].words->curRChars, list[j].words->WriteList, list[j].words->curWChars) ||
 	      intersect(list[i].words->WriteList, list[i].words->curWChars, list[j].words->ReadList, list[j].words->curRChars) ||
@@ -182,7 +184,7 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
 	    }
 	}
     }
-	for(int  i = 0; i < num;i++)
+	for( i = 0; i < num;i++)
 	{
 		if(list[i].curbefore == 0)
 			pushq(graph->no_dependencies,&list[i]);
@@ -192,52 +194,38 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
 
 int executeNoDependencies(Queue* no_dependencies)
 {
-  for(int curnode = 0;curnode < no_dependencies->cursize;curnode++)
+	int curnode;
+  for(curnode = 0;curnode < no_dependencies->cursize;curnode++)
     {
-      pid_t pid = fork()
+      pid_t pid = fork();
 	if(pid == 0)
 	  {
-	    execute_command(no_dependencies->qu[cursize]->command,false);
+	    execute_command(no_dependencies->qu[curnode]->command,false);
 	    exit(0);
 	  }
 	else
 	  {
-	    no_dependencies->qu[cursize]->pid = pid;
+	    no_dependencies->qu[curnode]->pid = pid;
 	  }
     }
 }
 
 int executeDependencies(Queue* dependencies)
 {
-  int status;
-  for(int curnode = 0;curnode < dependencies->cursize;curnode++)
+  int status,curnode,i;
+  for(curnode = 0;curnode < dependencies->cursize;curnode++)
     {
-      /* int status;
-      for each GraphNode j  in i->before
-      {
-        waitpid(i - pid, &status, 0);
-	}
-      pid_t pid = fork();
-      if (pid == 0)
-      {
-        execute->command(i->command);
-	  exit(0);
-	  }
-      else
-      {
-        i->pid = pid;
-	}*/
-      for(int i = 0; i < dependencies->qu[curnode]->before[curbefore];i++)
+      for(i = 0; i < dependencies->qu[curnode]->curbefore;i++)
 		waitpid(dependencies->qu[curnode]->before[i]->pid,&status, 0);
       pid_t pid = fork();
       if(pid == 0)
 	{
-	  execute_command(dependencies->qu[cursize]->command,false);
+	  execute_command(dependencies->qu[curnode]->command,false);
 	  exit(0);
 	}
       else
 	{
-	  dependencies->qu[cursize]->pid = pid;
+	  dependencies->qu[curnode]->pid = pid;
 	}
     }
 }

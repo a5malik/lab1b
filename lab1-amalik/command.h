@@ -35,15 +35,15 @@ typedef struct {
   int maxWChars;
 } RLWL;
 
-typedef struct {
+struct GraphNode {
   command_t command;
   int curbefore;
   int maxbefore;
    pid_t pid;
   int num;
   RLWL* words;
-  GraphNode** before;
-} GraphNode;
+  struct GraphNode** before;
+};
 
 typedef struct
 {

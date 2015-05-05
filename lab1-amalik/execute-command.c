@@ -101,7 +101,7 @@ RLWL* getLists2(command_t c, RLWL* cur)
 }
 RLWL* getLists1(command_t c)
 {
-  RLWL* g;
+  RLWL* g = malloc(sizeof(RLWL));
   g->curRChars = 0;
   g->curWChars = 0;
   g->maxWChars = 10;
@@ -181,11 +181,10 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
       else
 	pushq(graph->dependencies,&list[i]);
     }
-  return graph;
 }
 
 
-int executeNoDependencies(Queue* no_dependencies)
+void executeNoDependencies(Queue* no_dependencies)
 {
   int curnode;
   for(curnode = 0;curnode < no_dependencies->cursize;curnode++)
@@ -203,7 +202,7 @@ int executeNoDependencies(Queue* no_dependencies)
     }
 }
 
-int executeDependencies(Queue* dependencies)
+void executeDependencies(Queue* dependencies)
 {
   int status,curnode,i;
   for(curnode = 0;curnode < dependencies->cursize;curnode++)
@@ -226,6 +225,7 @@ int executeGraph(DependencyGraph* graph)
 {
   executeNoDependencies(graph->no_dependencies);
   executeDependencies(graph->dependencies);
+  return 0;
 }
 int
 command_status(command_t c)

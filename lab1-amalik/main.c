@@ -27,7 +27,7 @@ main (int argc, char **argv)
 {
   int command_number = 1;
   bool print_tree = false;
-  bool time_travel = false;
+  bool time_travel = true;
   program_name = argv[0];
 
   for (;;)

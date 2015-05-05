@@ -10,12 +10,9 @@
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
-
-
-
 int intersect(char **a, int nA, char **b, int nB)
 {
-	int i, j,r;
+  int i, j,r;
   for (i = 0; i < nA; i++)
     {
       for (j = 0; j < nB; j++)
@@ -35,12 +32,12 @@ int intersect(char **a, int nA, char **b, int nB)
 
 
 
-void addGraphNode(GraphNode *a, GraphNode *b) // adds b to the before of a
+void addGraphNode(struct GraphNode *a, struct GraphNode *b) // adds b to the before of a
 {
   if (a->curbefore == a->maxbefore)
     {
       a->maxbefore *= 2;
-      a->before = (GraphNode **)realloc(a->before, a->maxbefore * sizeof(GraphNode *));
+      a->before = (struct GraphNode **)realloc(a->before, a->maxbefore * sizeof(struct GraphNode *));
     }
   a->before[a->curbefore] = b;
   a->curbefore++;
@@ -78,7 +75,7 @@ RLWL* getLists2(command_t c, RLWL* cur)
 	  if (c->u.word[i][0] == '-')
 	    continue;
 	  addRead(cur, c->u.word[i]);
-	    }
+	}
       if (c->input != NULL)
 	{
 	  addRead(cur, c->input);
@@ -93,7 +90,7 @@ RLWL* getLists2(command_t c, RLWL* cur)
       if (c->output != NULL)
 	{
 	  addWrite(cur, c->output);
-	    }
+	}
     }
   else if (c->type == AND_COMMAND || c->type == OR_COMMAND || c->type == SEQUENCE_COMMAND || c->type == PIPE_COMMAND)
     {
@@ -119,15 +116,15 @@ void initQueue(Queue* q)
   //FIXME
   q->cursize = 0;
   q->maxsize = 10;
-  q->qu = (GraphNode**)malloc(q->maxsize*sizeof(GraphNode*));
+  q->qu = (struct GraphNode**)malloc(q->maxsize*sizeof(struct GraphNode*));
 }
 
-void pushq(Queue* q, GraphNode* gn)
+void pushq(Queue* q, struct GraphNode* gn)
 {
   if (q->cursize == q->maxsize)
     {
       q->maxsize *= 2;
-      q->qu = (GraphNode**)realloc(q->qu, q->maxsize*sizeof(GraphNode*));
+      q->qu = (struct GraphNode**)realloc(q->qu, q->maxsize*sizeof(struct GraphNode*));
     }
   q->qu[q->cursize] = gn;
   q->cursize++;
@@ -145,7 +142,7 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
   int num = 0;
   command_t command;
   int maxsize = 10;
-  GraphNode* list = (GraphNode *)malloc(maxsize*sizeof(GraphNode));
+  struct GraphNode* list = (struct GraphNode *)malloc(maxsize*sizeof(struct GraphNode));
   initQueue(graph->no_dependencies);
   initQueue(graph->dependencies);
   while ((command = read_command_stream(str)))
@@ -153,7 +150,7 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
       if (num == maxsize)
 	{
 	  maxsize *= 2;
-	  list = (GraphNode *)realloc(list, maxsize*sizeof(GraphNode));
+	  list = (struct GraphNode *)realloc(list, maxsize*sizeof(struct GraphNode));
 	}
       list[num].num = num;
       list[num].words = getLists1(command);
@@ -161,10 +158,10 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
       list[num].command = command;
       list[num].curbefore = 0;
       list[num].maxbefore = 10;
-      list[num].before = (GraphNode **)malloc(list[num].maxbefore*sizeof(GraphNode *));
+      list[num].before = (struct GraphNode **)malloc(list[num].maxbefore*sizeof(struct GraphNode *));
       num++;
     }
-	int i, j;
+  int i, j;
   for (i = 0; i < num; i++)
     {
       for (j = i + 1; j < num; j++)
@@ -174,33 +171,35 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
 	      intersect(list[i].words->WriteList, list[i].words->curWChars, list[j].words->WriteList, list[j].words->curWChars ))
 	    {
 	      addGraphNode(&list[j], &list[i]);
-		  pushq(graph->dependencies,&list[j]);
 	    }
 	}
     }
-	for( i = 0; i < num;i++)
-	{
-		if(list[i].curbefore == 0)
-			pushq(graph->no_dependencies,&list[i]);
-	}
+  for( i = 0; i < num;i++)
+    {
+      if(list[i].curbefore == 0)
+	pushq(graph->no_dependencies,&list[i]);
+      else
+	pushq(graph->dependencies,&list[i]);
+    }
+  return graph;
 }
 
 
 int executeNoDependencies(Queue* no_dependencies)
 {
-	int curnode;
+  int curnode;
   for(curnode = 0;curnode < no_dependencies->cursize;curnode++)
     {
       pid_t pid = fork();
-	if(pid == 0)
-	  {
-	    execute_command(no_dependencies->qu[curnode]->command,false);
-	    exit(0);
-	  }
-	else
-	  {
-	    no_dependencies->qu[curnode]->pid = pid;
-	  }
+      if(pid == 0)
+	{
+	  execute_command(no_dependencies->qu[curnode]->command,false);
+	  exit(0);
+	}
+      else
+	{
+	  no_dependencies->qu[curnode]->pid = pid;
+	}
     }
 }
 
@@ -210,7 +209,7 @@ int executeDependencies(Queue* dependencies)
   for(curnode = 0;curnode < dependencies->cursize;curnode++)
     {
       for(i = 0; i < dependencies->qu[curnode]->curbefore;i++)
-		waitpid(dependencies->qu[curnode]->before[i]->pid,&status, 0);
+	waitpid(dependencies->qu[curnode]->before[i]->pid,&status, 0);
       pid_t pid = fork();
       if(pid == 0)
 	{
@@ -255,9 +254,9 @@ void execute_simple(command_t c)
 	    exit(1);
 	}
       if (c->u.word[0][0] == 'e' &&
-	  c->u.word[0][1] == 'x' &&
-	  c->u.word[0][2] == 'e' &&
-	  c->u.word[0][3] == 'c' &&
+	    c->u.word[0][1] == 'x' &&
+	    c->u.word[0][2] == 'e' &&
+	    c->u.word[0][3] == 'c' &&
 	  c->u.word[0][4] == '\0')
 	execvp(c->u.word[1], &(c->u.word[1]));
       else

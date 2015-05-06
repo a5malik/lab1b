@@ -49,7 +49,7 @@ typedef struct
 {
   int cursize;
   int maxsize;
-  GraphNode** qu;
+  struct GraphNode** qu;
 } Queue;
 
 typedef struct {

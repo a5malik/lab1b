@@ -114,6 +114,7 @@ RLWL* getLists1(command_t c)
 void initQueue(Queue* q)
 {
   //FIXME
+  q = (Queue*)malloc(sizeof(Queue));
   q->cursize = 0;
   q->maxsize = 10;
   q->qu = (struct GraphNode**)malloc(q->maxsize*sizeof(struct GraphNode*));

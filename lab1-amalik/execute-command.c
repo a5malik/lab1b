@@ -13,17 +13,25 @@
 int intersect(char **a, int nA, char **b, int nB)
 {
   int i, j,r;
+  char same;
   for (i = 0; i < nA; i++)
     {
       for (j = 0; j < nB; j++)
 	{
 	  if (strlen(a[i]) != strlen(b[j]))
 	    continue;
+	  same = 't';
 	  for ( r = 0; r < (int)strlen(a[i]); r++)
 	    {
 	      if (a[i][r] != b[j][r])
-		continue;
+		{
+		  same = 'f';
+		  break;
+		}
 	    }
+	  if(same == 'f')
+	    continue;
+	  else 
 	  return 1;
 	}
     }
@@ -61,7 +69,7 @@ void addWrite(RLWL* cur, char* g)
       cur->WriteList = (char **)realloc(cur->WriteList, cur->maxWChars * sizeof(char *));
     }
   cur->WriteList[cur->curWChars] = g;
-  cur->curRChars++;
+  cur->curWChars++;
 }
 
 RLWL* getLists2(command_t c, RLWL* cur)
@@ -69,12 +77,17 @@ RLWL* getLists2(command_t c, RLWL* cur)
   if (c->type == SIMPLE_COMMAND)
     {
       int i = 1;
+      if (c->u.word[0][0] == 'e' &&
+	  c->u.word[0][1] == 'x' &&
+	  c->u.word[0][2] == 'e' &&
+	  c->u.word[0][3] == 'c' &&
+	  c->u.word[0][4] == '\0')
+	i++;
       while (c->u.word[i] != '\0')
 	{
-	  i++;
-	  if (c->u.word[i][0] == '-')
-	    continue;
+	  if (c->u.word[i][0] != '-')
 	  addRead(cur, c->u.word[i]);
+	  i++;
 	}
       if (c->input != NULL)
 	{
@@ -111,13 +124,13 @@ RLWL* getLists1(command_t c)
   return getLists2(c, g);
 }
 
-void initQueue(Queue* q)
+void initQueue(Queue** q)
 {
   //FIXME
-  q = (Queue*)malloc(sizeof(Queue));
-  q->cursize = 0;
-  q->maxsize = 10;
-  q->qu = (struct GraphNode**)malloc(q->maxsize*sizeof(struct GraphNode*));
+  *q = (Queue*)malloc(sizeof(Queue));
+  (*q)->cursize = 0;
+  (*q)->maxsize = 10;
+  (*q)->qu = (struct GraphNode**)malloc((*q)->maxsize*sizeof(struct GraphNode*));
 }
 
 void pushq(Queue* q, struct GraphNode* gn)
@@ -144,8 +157,8 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
   command_t command;
   int maxsize = 10;
   struct GraphNode* list = (struct GraphNode *)malloc(maxsize*sizeof(struct GraphNode));
-  initQueue(graph->no_dependencies);
-  initQueue(graph->dependencies);
+  initQueue(&(graph->dependencies));
+  initQueue(&(graph->no_dependencies));
   while ((command = read_command_stream(str)))
     {
       if (num == maxsize)
@@ -375,6 +388,7 @@ void execute_subshell(command_t c, bool time_travel)
   //int status;
   //waitpid(firstPid, &status, 0);
   c->status = c->u.subshell_command->status;
+  //}
   //}
 }
 

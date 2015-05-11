@@ -265,7 +265,7 @@ int executeGraph(DependencyGraph* graph, int *N)
     {
       curProcs = (int *) malloc(sizeof(int));
       maxProcs = (int *) malloc(sizeof(int));
-      *curProcs = 0;
+      *curProcs = 1;
       *maxProcs = *N;
     }
   executeNoDependencies(graph->no_dependencies, curProcs, maxProcs);

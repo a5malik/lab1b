@@ -39,7 +39,7 @@ struct GraphNode {
   command_t command;
   int curbefore;
   int maxbefore;
-   pid_t pid;
+  pid_t pid;
   int num;
   RLWL* words;
   struct GraphNode** before;
@@ -57,5 +57,5 @@ typedef struct {
   Queue* dependencies;
 } DependencyGraph;
 
-int executeGraph(DependencyGraph* graph);
+int executeGraph(DependencyGraph* graph, int *N);
 void createGraph(command_stream_t str,DependencyGraph* graph);

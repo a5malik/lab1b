@@ -31,8 +31,8 @@ int intersect(char **a, int nA, char **b, int nB)
 	    }
 	  if(same == 'f')
 	    continue;
-	  else 
-	  return 1;
+	  else
+	    return 1;
 	}
     }
   return 0;
@@ -78,15 +78,15 @@ RLWL* getLists2(command_t c, RLWL* cur)
     {
       int i = 1;
       if (c->u.word[0][0] == 'e' &&
-	  c->u.word[0][1] == 'x' &&
-	  c->u.word[0][2] == 'e' &&
-	  c->u.word[0][3] == 'c' &&
+	    c->u.word[0][1] == 'x' &&
+	    c->u.word[0][2] == 'e' &&
+	    c->u.word[0][3] == 'c' &&
 	  c->u.word[0][4] == '\0')
 	i++;
       while (c->u.word[i] != '\0')
 	{
 	  if (c->u.word[i][0] != '-')
-	  addRead(cur, c->u.word[i]);
+	    addRead(cur, c->u.word[i]);
 	  i++;
 	}
       if (c->input != NULL)
@@ -198,47 +198,78 @@ void createGraph(command_stream_t str,DependencyGraph* graph)
 }
 
 
-void executeNoDependencies(Queue* no_dependencies)
+void executeNoDependencies(Queue* no_dependencies, int *curProcs, int *maxProcs)
 {
   int curnode;
   for(curnode = 0;curnode < no_dependencies->cursize;curnode++)
     {
-      pid_t pid = fork();
-      if(pid == 0)
+      if (maxProcs == NULL || (*curProcs < *maxProcs))
 	{
-	  execute_command(no_dependencies->qu[curnode]->command,false);
-	  exit(0);
+	  pid_t pid = fork();
+	  if(pid == 0)
+	    {
+	      execute_command(no_dependencies->qu[curnode]->command,false);
+	      exit(0);
+	    }
+	  else
+	    {
+	      no_dependencies->qu[curnode]->pid = pid;
+	    }
+	  if (curProcs != NULL)
+	    (*curProcs)++;
 	}
       else
 	{
-	  no_dependencies->qu[curnode]->pid = pid;
+	  execute_command(no_dependencies->qu[curnode]->command, false);
 	}
     }
 }
 
-void executeDependencies(Queue* dependencies)
+void executeDependencies(Queue* dependencies, int *curProcs, int *maxProcs)
 {
   int status,curnode,i;
   for(curnode = 0;curnode < dependencies->cursize;curnode++)
     {
       for(i = 0; i < dependencies->qu[curnode]->curbefore;i++)
-	waitpid(dependencies->qu[curnode]->before[i]->pid,&status, 0);
-      pid_t pid = fork();
-      if(pid == 0)
 	{
-	  execute_command(dependencies->qu[curnode]->command,false);
-	  exit(0);
+	  if (dependencies->qu[curnode]->before[i]->pid == -1)
+	    continue;
+	  waitpid(dependencies->qu[curnode]->before[i]->pid,&status, 0);
+	}
+      if (maxProcs == NULL || (*curProcs < *maxProcs))
+	{
+	  pid_t pid = fork();
+	  if(pid == 0)
+	    {
+	      execute_command(dependencies->qu[curnode]->command,false);
+	      exit(0);
+	    }
+	  else
+	    {
+	      dependencies->qu[curnode]->pid = pid;
+	    }
+	  if (curProcs != NULL)
+	    (*curProcs)++;
 	}
       else
 	{
-	  dependencies->qu[curnode]->pid = pid;
+	  execute_command(dependencies->qu[curnode]->command,false);
 	}
     }
 }
-int executeGraph(DependencyGraph* graph)
+int executeGraph(DependencyGraph* graph, int *N)
 {
-  executeNoDependencies(graph->no_dependencies);
-  executeDependencies(graph->dependencies);
+  int *curProcs = NULL;
+  int *maxProcs = NULL;
+  if (N != NULL)
+    {
+      curProcs = (int *) malloc(sizeof(int));
+      maxProcs = (int *) malloc(sizeof(int));
+      *curProcs = 0;
+      *maxProcs = *N;
+    }
+  executeNoDependencies(graph->no_dependencies, curProcs, maxProcs);
+  executeDependencies(graph->dependencies, curProcs, maxProcs);
   return 0;
 }
 int
@@ -268,9 +299,9 @@ void execute_simple(command_t c)
 	    exit(1);
 	}
       if (c->u.word[0][0] == 'e' &&
-	    c->u.word[0][1] == 'x' &&
-	    c->u.word[0][2] == 'e' &&
-	    c->u.word[0][3] == 'c' &&
+	      c->u.word[0][1] == 'x' &&
+	      c->u.word[0][2] == 'e' &&
+	      c->u.word[0][3] == 'c' &&
 	  c->u.word[0][4] == '\0')
 	execvp(c->u.word[1], &(c->u.word[1]));
       else

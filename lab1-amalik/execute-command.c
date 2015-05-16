@@ -226,13 +226,17 @@ void executeNoDependencies(Queue* no_dependencies, int *curProcs, int *maxProcs)
   for(curnode = 0;curnode < no_dependencies->cursize;curnode++)
     {
       int maxPrcs = MaxSubProcs(no_dependencies->qu[curnode]->command);
-      if (maxProcs == NULL || ((*curProcs + maxPrcs) < *maxProcs))
+      if (maxProcs == NULL || ((*curProcs + maxPrcs) <= *maxProcs))
 	{
 	  pid_t pid = fork();
+	  //printf("Hello\n");
 	  if(pid == 0)
 	    {
+	      //printf("YO");
 	      execute_command(no_dependencies->qu[curnode]->command,false);
-	      exit(0);
+	      //printf("In Child, Curprocs is %d\n", *curProcs);
+	      //printf("In Child, Curprics is now %d\n", *curProcs);
+	      exit(maxPrcs);
 	    }
 	  else
 	    {
@@ -241,12 +245,6 @@ void executeNoDependencies(Queue* no_dependencies, int *curProcs, int *maxProcs)
 	  if (curProcs != NULL)
 	    {
 	      (*curProcs) += maxPrcs;
-	      if (curPids == maxPids)
-		{
-		  maxPids *= 2;
-		  allPids = (int *) realloc(allPids, sizeof(int) * maxPids);
-		}
-	      allPids[curPids] = pid;
 	      curPids++;
 	    }
 	}
@@ -255,8 +253,9 @@ void executeNoDependencies(Queue* no_dependencies, int *curProcs, int *maxProcs)
 	  while (curPids != 0 && (*curProcs + maxPrcs) > *maxProcs)
 	    {
 	      int status;
-	      waitpid(allPids[curPids - 1], &status, 0);
-	      (*curProcs) -= 1;
+	      waitpid(-1, &status, 0);
+	      int j = WEXITSTATUS(status);
+	      (*curProcs) -= j;
 	      curPids -= 1;
 	    }
 	  if ((*curProcs + maxPrcs) > *maxProcs)

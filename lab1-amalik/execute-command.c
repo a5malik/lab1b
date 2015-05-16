@@ -9,6 +9,28 @@
 #include <string.h>
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
+int *allPids;
+int maxPids;
+int curPids;
+int MaxSubProcs(command_t c)
+{
+  if (c->type == SIMPLE_COMMAND)
+    return 1;
+  else if (c->type == SEQUENCE_COMMAND)
+    return 1 + MaxSubProcs(c->u.command[0]) + MaxSubProcs(c->u.command[1]);
+  else if (c->type == PIPE_COMMAND)
+    return 2 + MaxSubProcs(c->u.command[0]) + MaxSubProcs(c->u.command[1]);
+  else if (c->type == AND_COMMAND || c->type == OR_COMMAND)
+    {
+      int i = 1+MaxSubProcs(c->u.command[0]);
+      int j = 1+MaxSubProcs(c->u.command[1]);
+      if (i > j)
+	return i;
+      return j;
+    }
+  else
+    return 1 + MaxSubProcs(c->u.subshell_command);
+}
 
 int intersect(char **a, int nA, char **b, int nB)
 {
@@ -78,9 +100,9 @@ RLWL* getLists2(command_t c, RLWL* cur)
     {
       int i = 1;
       if (c->u.word[0][0] == 'e' &&
-	    c->u.word[0][1] == 'x' &&
-	    c->u.word[0][2] == 'e' &&
-	    c->u.word[0][3] == 'c' &&
+	      c->u.word[0][1] == 'x' &&
+	      c->u.word[0][2] == 'e' &&
+	      c->u.word[0][3] == 'c' &&
 	  c->u.word[0][4] == '\0')
 	i++;
       while (c->u.word[i] != '\0')
@@ -203,7 +225,8 @@ void executeNoDependencies(Queue* no_dependencies, int *curProcs, int *maxProcs)
   int curnode;
   for(curnode = 0;curnode < no_dependencies->cursize;curnode++)
     {
-      if (maxProcs == NULL || (*curProcs < *maxProcs))
+      int maxPrcs = MaxSubProcs(no_dependencies->qu[curnode]->command);
+      if (maxProcs == NULL || ((*curProcs + maxPrcs) < *maxProcs))
 	{
 	  pid_t pid = fork();
 	  if(pid == 0)
@@ -216,11 +239,52 @@ void executeNoDependencies(Queue* no_dependencies, int *curProcs, int *maxProcs)
 	      no_dependencies->qu[curnode]->pid = pid;
 	    }
 	  if (curProcs != NULL)
-	    (*curProcs)++;
+	    {
+	      (*curProcs) += maxPrcs;
+	      if (curPids == maxPids)
+		{
+		  maxPids *= 2;
+		  allPids = (int *) realloc(allPids, sizeof(int) * maxPids);
+		}
+	      allPids[curPids] = pid;
+	      curPids++;
+	    }
 	}
       else
 	{
-	  execute_command(no_dependencies->qu[curnode]->command, false);
+	  while (curPids != 0 && (*curProcs + maxPrcs) > *maxProcs)
+	    {
+	      int status;
+	      waitpid(allPids[curPids - 1], &status, 0);
+	      (*curProcs) -= 1;
+	      curPids -= 1;
+	    }
+	  if ((*curProcs + maxPrcs) > *maxProcs)
+	    printf("ERRRRRRROR");
+	  else
+	    {
+	      pid_t pid = fork();
+	      if(pid == 0)
+		{
+		  execute_command(no_dependencies->qu[curnode]->command,false);
+		  exit(0);
+		}
+	      else
+		{
+		  no_dependencies->qu[curnode]->pid = pid;
+		}
+	      if (curProcs != NULL)
+		{
+		  (*curProcs) += maxPrcs;
+		  if (curPids == maxPids)
+		    {
+		      maxPids *= 2;
+		      allPids = (int *) realloc(allPids, sizeof(int) * maxPids);
+		    }
+		  allPids[curPids] = pid;
+		  curPids++;
+		}
+	    }
 	}
     }
 }
@@ -259,10 +323,14 @@ void executeDependencies(Queue* dependencies, int *curProcs, int *maxProcs)
 }
 int executeGraph(DependencyGraph* graph, int *N)
 {
+  allPids = NULL;
+  maxPids = 10;
+  curPids = 0;
   int *curProcs = NULL;
   int *maxProcs = NULL;
   if (N != NULL)
     {
+      allPids =  (int *) malloc(sizeof(int)*maxPids);
       curProcs = (int *) malloc(sizeof(int));
       maxProcs = (int *) malloc(sizeof(int));
       *curProcs = 1;
@@ -299,9 +367,9 @@ void execute_simple(command_t c)
 	    exit(1);
 	}
       if (c->u.word[0][0] == 'e' &&
-	      c->u.word[0][1] == 'x' &&
-	      c->u.word[0][2] == 'e' &&
-	      c->u.word[0][3] == 'c' &&
+	        c->u.word[0][1] == 'x' &&
+	        c->u.word[0][2] == 'e' &&
+	        c->u.word[0][3] == 'c' &&
 	  c->u.word[0][4] == '\0')
 	execvp(c->u.word[1], &(c->u.word[1]));
       else

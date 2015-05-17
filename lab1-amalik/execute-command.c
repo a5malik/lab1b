@@ -16,11 +16,9 @@ int MaxSubProcs(command_t c)
 {
   if (c->type == SIMPLE_COMMAND)
     return 1;
-  else if (c->type == SEQUENCE_COMMAND)
-    return 1 + MaxSubProcs(c->u.command[0]) + MaxSubProcs(c->u.command[1]);
   else if (c->type == PIPE_COMMAND)
     return 2 + MaxSubProcs(c->u.command[0]) + MaxSubProcs(c->u.command[1]);
-  else if (c->type == AND_COMMAND || c->type == OR_COMMAND)
+  else if (c->type == AND_COMMAND || c->type == OR_COMMAND || c->type == SEQUENCE_COMMAND)
     {
       int i = 1+MaxSubProcs(c->u.command[0]);
       int j = 1+MaxSubProcs(c->u.command[1]);
@@ -29,7 +27,7 @@ int MaxSubProcs(command_t c)
       return j;
     }
   else
-    return 1 + MaxSubProcs(c->u.subshell_command);
+    return MaxSubProcs(c->u.subshell_command);
 }
 
 int intersect(char **a, int nA, char **b, int nB)
@@ -253,10 +251,12 @@ void executeNoDependencies(Queue* no_dependencies, int *curProcs, int *maxProcs)
 	  while (curPids != 0 && (*curProcs + maxPrcs) > *maxProcs)
 	    {
 	      int status;
+	      printf("Before, curProcs is %d, curPids is %d\n", *curProcs, curPids);
 	      waitpid(-1, &status, 0);
 	      int j = WEXITSTATUS(status);
 	      (*curProcs) -= j;
 	      curPids -= 1;
+	      printf("After, curProcs is %d, curPids is %d\n", *curProcs, curPids);
 	    }
 	  if ((*curProcs + maxPrcs) > *maxProcs)
 	    printf("ERRRRRRROR");
@@ -266,6 +266,7 @@ void executeNoDependencies(Queue* no_dependencies, int *curProcs, int *maxProcs)
 	      if(pid == 0)
 		{
 		  execute_command(no_dependencies->qu[curnode]->command,false);
+
 		  exit(maxPrcs);
 		}
 	      else

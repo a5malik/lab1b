@@ -299,25 +299,71 @@ void executeDependencies(Queue* dependencies, int *curProcs, int *maxProcs)
 	  if (dependencies->qu[curnode]->before[i]->pid == -1)
 	    continue;
 	  waitpid(dependencies->qu[curnode]->before[i]->pid,&status, 0);
+	  (*curProcs) -= WEXITSTATUS(status);
+	  dependencies->qu[curnode]->before[i]->pid = -1;
 	}
-      if (maxProcs == NULL || (*curProcs < *maxProcs))
+      int maxPrcs = MaxSubProcs(dependencies->qu[curnode]->command);
+      if (maxProcs == NULL || ((*curProcs + maxPrcs) <= *maxProcs))
 	{
 	  pid_t pid = fork();
+	  //printf("Hello\n");
 	  if(pid == 0)
 	    {
+	      //printf("YO");
 	      execute_command(dependencies->qu[curnode]->command,false);
-	      exit(0);
+	      //printf("In Child, Curprocs is %d\n", *curProcs);
+	      //printf("In Child, Curprics is now %d\n", *curProcs);
+	      exit(maxPrcs);
 	    }
 	  else
 	    {
 	      dependencies->qu[curnode]->pid = pid;
 	    }
 	  if (curProcs != NULL)
-	    (*curProcs)++;
+	    {
+	      (*curProcs) += maxPrcs;
+	      curPids++;
+	    }
 	}
       else
 	{
-	  execute_command(dependencies->qu[curnode]->command,false);
+	  while (curPids != 0 && (*curProcs + maxPrcs) > *maxProcs)
+	    {
+	      int status;
+	      printf("Before, curProcs is %d, curPids is %d\n", *curProcs, curPids);
+	      waitpid(-1, &status, 0);
+	      int j = WEXITSTATUS(status);
+	      (*curProcs) -= j;
+	      curPids -= 1;
+	      printf("After, curProcs is %d, curPids is %d\n", *curProcs, curPids);
+	    }
+	  if ((*curProcs + maxPrcs) > *maxProcs)
+	    printf("ERRRRRRROR");
+	  else
+	    {
+	      pid_t pid = fork();
+	      if(pid == 0)
+		{
+		  execute_command(dependencies->qu[curnode]->command,false);
+
+		  exit(maxPrcs);
+		}
+	      else
+		{
+		  dependencies->qu[curnode]->pid = pid;
+		}
+	      if (curProcs != NULL)
+		{
+		  (*curProcs) += maxPrcs;
+		  if (curPids == maxPids)
+		    {
+		      maxPids *= 2;
+		      allPids = (int *) realloc(allPids, sizeof(int) * maxPids);
+		    }
+		  allPids[curPids] = pid;
+		  curPids++;
+		}
+	    }
 	}
     }
 }

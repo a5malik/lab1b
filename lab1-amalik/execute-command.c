@@ -266,7 +266,7 @@ void executeNoDependencies(Queue* no_dependencies, int *curProcs, int *maxProcs)
 	      if(pid == 0)
 		{
 		  execute_command(no_dependencies->qu[curnode]->command,false);
-		  exit(0);
+		  exit(maxPrcs);
 		}
 	      else
 		{
